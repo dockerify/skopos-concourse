@@ -1,0 +1,69 @@
+doctype: com.datagridsys.doctype/skopos/model
+version: 1
+components:
+  concourse-db:
+    image: postgres:9.6
+    singleton: true
+    visual:
+      x: 620
+      "y": 60
+    env:
+      PGDATA: /database
+      POSTGRES_DB: concourse
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_USER: concourse
+  concourse-web:
+    image: concourse/concourse:3.8.0
+    singleton: true
+    provides:
+      ports: [8080/tcp]
+    uses:
+      concourse-db: {}
+    visual:
+      x: 360
+      "y": 60
+    env:
+      CONCOURSE_BASIC_AUTH_PASSWORD: changeme
+      CONCOURSE_BASIC_AUTH_USERNAME: concourse
+      CONCOURSE_EXTERNAL_URL: http://192.168.99.100:8080
+      CONCOURSE_POSTGRES_DATABASE: concourse
+      CONCOURSE_POSTGRES_HOST: concourse-db
+      CONCOURSE_POSTGRES_PASSWORD: changeme
+      CONCOURSE_POSTGRES_USER: concourse
+    volumes:
+      concourse-db:
+        path: /concourse-db
+      concourse-keys:
+        path: /concourse-keys
+    plugin:
+      docker:
+        command:
+        - web
+  concourse-worker:
+    image: concourse/concourse:3.8.0
+    singleton: true
+    uses:
+      concourse-web: {}
+    visual:
+      x: 60
+      "y": 210
+    env:
+      CONCOURSE_TSA_HOST: concourse-web
+    volumes:
+      concourse-db:
+        path: /concourse-db
+      concourse-keys:
+        path: /concourse-keys
+    plugin:
+      docker:
+        command:
+        - worker
+gateways:
+  http-8080:
+    type: host_port
+    exposes:
+    - port: "8080"
+    target: [concourse-web]
+    visual:
+      x: 60
+      "y": 60
